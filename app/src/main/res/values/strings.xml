@@ -5,4 +5,7 @@
     <string name="time_input_description">Frequency</string>
     <string name="start_button_text">Start</string>
     <string name="stop_button_text">Stop</string>
+    <string name="default_audio_url">metaphorAudio.mp3</string>
+    <string name="default_video_url">metaphor.mp4</string>
+    <string name="default_cell_number">‪4252439141‬</string>
 </resources>

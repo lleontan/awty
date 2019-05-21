@@ -38,6 +38,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" app:layout_constraintStart_toStartOf="@+id/textEditInput"
             app:layout_constraintBaseline_toBaselineOf="@+id/textEditInput"/>
+        <Spinner
+                android:id="@+id/text_options_spinner"
+                android:gravity="center"
+
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
     <Button
             android:id="@+id/startButton"
             android:text="@string/start_button_text"
@@ -45,5 +51,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" app:layout_constraintTop_toTopOf="@+id/textEditInput"
             app:layout_constraintStart_toStartOf="@+id/textEditInput"/>
+
     </LinearLayout>
 </android.support.constraint.ConstraintLayout>
