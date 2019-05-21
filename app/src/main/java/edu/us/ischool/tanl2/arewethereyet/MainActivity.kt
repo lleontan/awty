@@ -21,7 +21,10 @@ import kotlinx.android.synthetic.main.activity_main.*
 import java.net.URI
 import java.util.*
 import android.app.PendingIntent
-
+import android.content.res.AssetManager
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 
 
 class MainActivity : AppCompatActivity() {
@@ -33,7 +36,7 @@ class MainActivity : AppCompatActivity() {
     val timerMod = 60000L
     var timerRunning: Boolean = false
     var textContentType = 0
-    val SEND_SMS_REQUEST_CODE=42
+    val SEND_SMS_REQUEST_CODE = 42
 
     private companion object {
         private var instance: MainActivity? = null
@@ -50,11 +53,12 @@ class MainActivity : AppCompatActivity() {
                 mainExec()
             }
         }
-        fun mainExec(){
+
+        fun mainExec() {
             var targetUrl = phoneEditInput.text.toString()
             val numberValidRegex = Regex("[0-9]{1,12}")
             if (targetUrl.matches(numberValidRegex)) {
-                Log.v("networks","Message worked with regex")
+                Log.v("networks", "Message worked with regex")
                 when (textContentType) {
                     1 -> sendAudio(targetUrl)
                     2 -> sendVideo(targetUrl)
@@ -65,23 +69,39 @@ class MainActivity : AppCompatActivity() {
 
         fun sendAudio(targetUrl: String) {
             val smsManager = SmsManager.getDefault() as SmsManager
-            var contentUrl: Uri = Uri.parse("@string/default_audio_url")
+            val uriStr = getString(R.string.default_audio_url)
+            val filePath = File(applicationContext.cacheDir,uriStr).path
+            var contentUrl: Uri = Uri.parse("$filePath")
+            val doesItExist=File(contentUrl.path).exists()
+            Log.v("networks", "sending audio $uriStr, exists? $doesItExist")
             smsManager.sendMultimediaMessage(MainActivity.applicationContext(), contentUrl, targetUrl, null, null)
-
+            val messageString = "Audio sent to: $targetUrl"
+            var message = Toast.makeText(applicationContext, messageString, Toast.LENGTH_LONG)
+            
+            message.setText(messageString)
+            message.show()
         }
 
         fun sendVideo(targetUrl: String) {
             val smsManager = SmsManager.getDefault() as SmsManager
-            val defaultVideoUrl: String = "@string/default_video_url"
-            var contentUrl: Uri = Uri.parse(defaultVideoUrl)
+            val defaultVideoUrl: String = getString(R.string.default_video_url)
+            val fileExists = File(applicationContext.cacheDir,defaultVideoUrl).path
+            var contentUrl: Uri = Uri.parse("$fileExists")
+            Log.v("networks", "sending audio $defaultVideoUrl, exists? $fileExists")
             smsManager.sendMultimediaMessage(MainActivity.applicationContext(), contentUrl, targetUrl, null, null)
+            val messageString = "Video sent to: $targetUrl"
+            var message = Toast.makeText(applicationContext, messageString, Toast.LENGTH_LONG)
+            message.setText(messageString)
+            message.show()
         }
 
         fun sendSMS(text: String, targetUrl: String) {
-            Log.v("networks","sending to $targetUrl")
+            Log.v("networks", "sending to $targetUrl")
             val smsManager = SmsManager.getDefault() as SmsManager
-            val sentIntent = PendingIntent.getBroadcast(MainActivity.applicationContext(), 0, Intent(Intent.ACTION_SENDTO), 0)
-            val deliveredIntent = PendingIntent.getBroadcast(MainActivity.applicationContext(), 0, Intent(Intent.ACTION_SENDTO), 0)
+            val sentIntent =
+                PendingIntent.getBroadcast(MainActivity.applicationContext(), 0, Intent(Intent.ACTION_SENDTO), 0)
+            val deliveredIntent =
+                PendingIntent.getBroadcast(MainActivity.applicationContext(), 0, Intent(Intent.ACTION_SENDTO), 0)
             smsManager.sendTextMessage(targetUrl, null, text, null, null)
             val messageString = "Text sent to: $targetUrl"
             var message = Toast.makeText(applicationContext, messageString, Toast.LENGTH_LONG)
@@ -133,8 +153,11 @@ class MainActivity : AppCompatActivity() {
             makeGenericToast("Invalid text length")
         }
     }
-    override fun onRequestPermissionsResult(requestCode: Int,
-                                            permissions: Array<String>, grantResults: IntArray) {
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>, grantResults: IntArray
+    ) {
         when (requestCode) {
             SEND_SMS_REQUEST_CODE -> {
                 // If request is cancelled, the result arrays are empty.
@@ -155,15 +178,39 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    fun writeFiles(fileName: String) {
+        val cacheFile = File(applicationContext.cacheDir, fileName)
+        if (!cacheFile.exists()) {
+            try {
+                val inputStream = applicationContext.assets.open(fileName)
+                val outputStream = FileOutputStream(cacheFile)
+                try {
+                    inputStream.copyTo(outputStream)
+                } finally {
+                    inputStream.close()
+                    outputStream.close()
+                }
+            } catch (e: IOException) {
+                throw IOException("Could not open $fileName", e)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        instance=this
+        instance = this
+        writeFiles(getString(R.string.default_video_url))
+        writeFiles(getString(R.string.default_audio_url))
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
-            != PackageManager.PERMISSION_GRANTED) {
+            != PackageManager.PERMISSION_GRANTED
+        ) {
             // Permission is not granted
-            ActivityCompat.requestPermissions(this,
+            ActivityCompat.requestPermissions(
+                this,
                 arrayOf(Manifest.permission.SEND_SMS),
-                SEND_SMS_REQUEST_CODE)
+                SEND_SMS_REQUEST_CODE
+            )
         }
         setContentView(R.layout.activity_main)
         ArrayAdapter.createFromResource(
@@ -176,13 +223,13 @@ class MainActivity : AppCompatActivity() {
             // Apply the adapter to the spinner
             text_options_spinner.adapter = adapter
         }
-        text_options_spinner.onItemSelectedListener=object : AdapterView.OnItemSelectedListener {
+        text_options_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: AdapterView<*>?) {
 
             }
 
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                textContentType=position
+                textContentType = position
             }
 
         }
@@ -199,7 +246,7 @@ class MainActivity : AppCompatActivity() {
                 timer = object : CountDownTimer(delay, timerMod) {
                     override fun onFinish() {
                         //sendMessage.exec()
-                        Log.v("networks","Timer cycle finished")
+                        Log.v("networks", "Timer cycle finished")
                         sendMessage.mainExec()
                         timer.cancel()
                         timer.start()
